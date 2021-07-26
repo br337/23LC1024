@@ -80,3 +80,5 @@ Now that the basic SPI communication is complete, the protocol used by the SRAM 
  }
 ```
 The SRAM needs to be initialized 
+
+<< TO BE COMPLETED >>
