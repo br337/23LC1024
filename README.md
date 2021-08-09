@@ -130,7 +130,8 @@ The Write function works analogous to the Read function, with the only differenc
 The critical section functions used in this example look as follow:
 ```C
 void 
-enterCriticalSection(void) {
+enterCriticalSection(void) 
+{
 	uint8_t gIEB = ((SREG >> 7)  << 7);
 	
 	SREG &= 0b01111111; // Deactivate interrupts
@@ -151,7 +152,9 @@ enterCriticalSection(void) {
 ```
 
 ```C
-void leaveCriticalSection(void) {
+void 
+leaveCriticalSection(void) 
+{
     uint8_t gIEB = ((SREG >> 7)  << 7);
     
     SREG &= 0b01111111;
