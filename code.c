@@ -1,3 +1,5 @@
+// [!] THIS CODE IS TO BE USED ONLY AS A REFERENCE [!]
+
 void 
 initInputSPI(void) 
 {
