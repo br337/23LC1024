@@ -79,6 +79,96 @@ Now that the basic SPI communication is complete, the protocol used by the SRAM 
 	 leaveCriticalSection();
  }
 ```
-The SRAM needs to be initialized 
+The SRAM needs to be initialized first by setting the correspnding AVR PORT register accordingly. This means that the corresponding bit through which the connection has been made to the external SRAM has to be set to a 0 (PORTB) so that it acts as an open drain. Now the operating mode has to be set. For simplicity, the communication is going to work in byte mode and not in page mode. This mean that the AVR has to send two bytes over the SPI: 1 and 0. The fist 1 byte is the Write Mode Register Code, which notifies the SRAM that its operating mode is going to be updated. The second one tells the SRAM that the operating mode should be set to byte mode. This way the SRAM will update its operating mode accordingly. Afterwards, the PORTB register will be reverted to its initial state.
 
-<< TO BE COMPLETED >>
+Now that the SRAM is ready and the SPI connection works accordingly, the read/write operations for the SRAM should be implemented according to the protocol.
+```C
+MemValue 
+readSRAM(uint16_t addr)
+{
+	enterCriticalSection();
+	
+	PORTB &= 0b11101111;
+	spiSend(0x03);
+	
+	spiSend(0b00000000);
+	spiSend((uint8_t) (addr >> 8));
+	spiSend((uint8_t) addr);
+	
+	MemValue output = spiReceive();
+	PORTB |= 0b00010000;
+	
+	leaveCriticalSection();
+	return output;
+}
+```
+The read function works by first setting the corresponding bit in PORTB to an open drain, then sending the Read Code provided by the SRAM documentation over the SPI, followed by the memory address that should be returned. Since the SRAM documentation specifies that 24 bit addresses should be used, even though the AVR uses 16 bit addresses, an empty byte will be sent first, followed by the first half of the 16 bit address, and then the second half. After sending the read command and the address in question, spiReceive() will be called and it will wait until a response has arrived. Before returning said output, the PORTB register should be reverted to its initial state.
+
+```C
+void 
+writeSRAM(uint16_t addr, uint8_t value)
+{
+	enterCriticalSection();
+	
+	PORTB &= 0b11101111;
+	spiSend(0x02);
+	
+	spiSend(0b00000000);
+	spiSend((uint8_t) (addr >> 8));
+	spiSend((uint8_t) addr);
+	
+	spiSend(value);
+	PORTB |= 0b00010000;
+
+	leaveCriticalSection();
+}
+```
+The Write function works analogous to the Read function, with the only difference that there is no output to be waiting for since this time the AVR isn't reading anything back but just sending a value over the SPI after the Write code and address have been specified.
+
+
+---
+The critical section functions used in this example look as follow:
+```C
+void 
+enterCriticalSection(void) {
+	uint8_t gIEB = ((SREG >> 7)  << 7);
+	
+	SREG &= 0b01111111; // Deactivate interrupts
+	
+	if(criticalSectionCount < 255)
+	{
+		criticalSectionCount++;
+	}
+	else
+	{
+		os_error("Error: Too many critical sections");
+	}
+	
+	TIMSK2 &= 0b11111101; // Deactivate scheduler
+	
+	SREG |= gIEB;
+}
+```
+
+```C
+void leaveCriticalSection(void) {
+    uint8_t gIEB = ((SREG >> 7)  << 7);
+    
+    SREG &= 0b01111111;
+	if(criticalSectionCount > 0)
+	{
+		criticalSectionCount--;
+	}
+	else
+	{
+		error("Error: too many critical sections left");
+	}
+	
+	if (criticalSectionCount == 0) 
+	{
+		TIMSK2 |= (1 << 1); // Activate scheduler
+	}
+	
+    SREG |= gIEB;
+}
+```
