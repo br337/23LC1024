@@ -83,7 +83,7 @@ The SRAM needs to be initialized first by setting the correspnding AVR PORT regi
 
 Now that the SRAM is ready and the SPI connection works accordingly, the read/write operations for the SRAM should be implemented according to the protocol.
 ```C
-MemValue 
+uint8_t 
 readSRAM(uint16_t addr)
 {
 	enterCriticalSection();
